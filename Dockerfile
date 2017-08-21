@@ -5,6 +5,7 @@ ENV PATH $PATH:/usr/local/nginx/sbin
 
 EXPOSE 1935
 EXPOSE 80
+EXPOSE 443
 
 # create directories
 RUN mkdir /src /config /logs /data /static
@@ -14,15 +15,14 @@ RUN apt-get update && \
   apt-get upgrade -y && \
   apt-get clean && \
   apt-get install -y --no-install-recommends build-essential \
-  wget software-properties-common && \
+  wget software-properties-common ufw && \
 # ffmpeg
   add-apt-repository ppa:mc3man/trusty-media && \
   apt-get update && \
   apt-get install -y --no-install-recommends ffmpeg && \
 # nginx dependencies
   apt-get install -y --no-install-recommends libpcre3-dev \
-  zlib1g-dev libssl-dev wget && \
-  rm -rf /var/lib/apt/lists/*
+  zlib1g-dev libssl-dev wget
 
 # get nginx source
 WORKDIR /src
@@ -45,6 +45,22 @@ RUN ./configure --add-module=/src/nginx-rtmp-module-1.1.6 \
 
 ADD nginx.conf /config/nginx.conf
 ADD static /static
+ADD player /player
+
+# get letsencrypt
+#RUN add-apt-repository ppa:certbot/certbot && \
+#  apt-get update && \
+#  apt-get install -y python-certbot-nginx
+
+# configure ufw
+#RUN sudo ufw allow ssh && \
+#  sudo ufw allow 80 && \
+#  sudo ufw allow 443 && \
+#  sudo ufw allow from 98.117.12.36 to any port 1935 && \
+#  sudo ufw default deny incoming && \
+#  sudo ufw default allow outgoing && \
+#  sudo ufw enable
 
 WORKDIR /
-CMD "nginx"
+CMD "nginx" && \
+RUN certbot --nginx -d transcendence.do.networkgeek.cloud -m geoff@networkgeek.cloud --agree-tos --non-interactive
